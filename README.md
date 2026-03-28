@@ -1,6 +1,6 @@
 # aho-corasick2
 
-Multi-pattern string matching.""".
+Aho-Corasick multi-pattern string search.
 
 Zero dependencies. Python 3.8+.
 
