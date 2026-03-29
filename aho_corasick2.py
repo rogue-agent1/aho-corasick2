@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""aho_corasick2 - Aho-Corasick multi-pattern string search."""
-import argparse
+"""Aho-Corasick multi-pattern string matching."""
+import sys
 from collections import deque
 
 class AhoCorasick:
@@ -8,51 +8,54 @@ class AhoCorasick:
         self.goto = [{}]
         self.fail = [0]
         self.output = [[]]
-    
-    def add_pattern(self, pattern: str, idx: int = 0):
+    def add(self, pattern):
         state = 0
-        for c in pattern:
-            if c not in self.goto[state]:
-                self.goto[state][c] = len(self.goto)
-                self.goto.append({}); self.fail.append(0); self.output.append([])
-            state = self.goto[state][c]
-        self.output[state].append((idx, pattern))
-    
+        for ch in pattern:
+            if ch not in self.goto[state]:
+                self.goto[state][ch] = len(self.goto)
+                self.goto.append({})
+                self.fail.append(0)
+                self.output.append([])
+            state = self.goto[state][ch]
+        self.output[state].append(pattern)
     def build(self):
-        queue = deque()
-        for c, s in self.goto[0].items():
-            queue.append(s)
-        while queue:
-            r = queue.popleft()
-            for c, s in self.goto[r].items():
-                queue.append(s)
+        q = deque()
+        for ch, s in self.goto[0].items():
+            q.append(s)
+        while q:
+            r = q.popleft()
+            for ch, s in self.goto[r].items():
+                q.append(s)
                 state = self.fail[r]
-                while state and c not in self.goto[state]:
+                while state and ch not in self.goto[state]:
                     state = self.fail[state]
-                self.fail[s] = self.goto[state].get(c, 0)
-                if self.fail[s] == s: self.fail[s] = 0
+                self.fail[s] = self.goto[state].get(ch, 0)
+                if self.fail[s] == s:
+                    self.fail[s] = 0
                 self.output[s] = self.output[s] + self.output[self.fail[s]]
-    
-    def search(self, text: str) -> list:
+    def search(self, text):
         state, results = 0, []
-        for i, c in enumerate(text):
-            while state and c not in self.goto[state]:
+        for i, ch in enumerate(text):
+            while state and ch not in self.goto[state]:
                 state = self.fail[state]
-            state = self.goto[state].get(c, 0)
-            for idx, pat in self.output[state]:
+            state = self.goto[state].get(ch, 0)
+            for pat in self.output[state]:
                 results.append((i - len(pat) + 1, pat))
         return results
 
-def main():
-    p = argparse.ArgumentParser(description="Aho-Corasick search")
-    p.add_argument("text"); p.add_argument("-p", "--patterns", nargs="+", required=True)
-    args = p.parse_args()
+def test():
     ac = AhoCorasick()
-    for i, pat in enumerate(args.patterns):
-        ac.add_pattern(pat, i)
+    for p in ["he", "she", "his", "hers"]:
+        ac.add(p)
     ac.build()
-    for pos, pat in ac.search(args.text):
-        print(f"  '{pat}' at position {pos}")
+    r = ac.search("ahishers")
+    found = {(pos, pat) for pos, pat in r}
+    assert (1, "his") in found
+    assert (3, "she") in found
+    assert (4, "he") in found
+    assert (4, "hers") in found
+    print("  aho_corasick2: ALL TESTS PASSED")
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 1 and sys.argv[1] == "test": test()
+    else: print("Aho-Corasick multi-pattern matcher")
